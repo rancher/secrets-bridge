@@ -9,34 +9,20 @@ import:
   version: 5b7154ba2efe13ff86ae8830a9e7cb120b080d6e
 - package: github.com/docker/go-units
   version: 5d2041e26a699eaca682e2ea41c8f891e1060444
-- package: github.com/fatih/structs
-  version: 24f3e1df2f5ffab5696aaa95cf0b8dea167ef084
 - package: github.com/gorilla/context
   version: a8d44e7d8e4d532b6a27a02dd82abb31cc1b01bd
 - package: github.com/gorilla/mux
   version: 9c19ed558d5df4da88e2ade9c8940d742aef0e7e
 - package: github.com/gorilla/websocket
   version: e2e3d8414d0fbae04004f151979f4e27c6747fe7
-- package: github.com/hashicorp/errwrap
-  version: 7554cd9344cec97297fa6649b055a8c98c2a1e55
-- package: github.com/hashicorp/go-cleanhttp
-  version: ad28ea4487f05916463e2423a55166280e8254b5
-- package: github.com/hashicorp/go-multierror
-  version: d30f09973e19c1dfcd120b2d9c4f168e68d6b5d5
-- package: github.com/hashicorp/hcl
-  version: 9a905a34e6280ce905da1a32344b25e81011197a
 - package: github.com/hashicorp/vault
   version: 250aa228df1303a383f852a4a2f71a3195e681c6
-- package: github.com/mitchellh/mapstructure
-  version: d2dd0262208475919e1a362f675cfc0e7c10e905
 - package: github.com/opencontainers/runc
   version: ae0fc15b1e969b06fa575638d234feaa1596d69c
 - package: github.com/rancher/go-rancher
   version: c21ad7797bc727e5fe65ae85d1be714845ce415c
 - package: github.com/rancher/go-rancher-metadata
   version: 802039712650f3d2035179ec6c416093e58efa29
-- package: github.com/rancher/secrets-bridge
-  version: 7e2f577ee7216ed5426fc8e07920ca978c2ffd7a
 - package: github.com/rancher/trash
   version: 8c623b6961c66b566a73e05c588235d6b88afefe
 - package: github.com/Sirupsen/logrus

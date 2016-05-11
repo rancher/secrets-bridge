@@ -1,0 +1,8 @@
+#!/bin/bash -e
+
+cd $(dirname $0)/..
+
+source $(dirname $0)/version
+
+go generate
+go build -ldflags="-w" -o bin/secrets-bridge
