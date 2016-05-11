@@ -35,8 +35,6 @@ import:
   version: c21ad7797bc727e5fe65ae85d1be714845ce415c
 - package: github.com/rancher/go-rancher-metadata
   version: 802039712650f3d2035179ec6c416093e58efa29
-- package: github.com/rancher/secrets-bridge
-  version: 7e2f577ee7216ed5426fc8e07920ca978c2ffd7a
 - package: github.com/rancher/trash
   version: 8c623b6961c66b566a73e05c588235d6b88afefe
 - package: github.com/Sirupsen/logrus
