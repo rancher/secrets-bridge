@@ -156,10 +156,11 @@ func ContainerStart(w http.ResponseWriter, msg *types.Message) error {
 	logrus.Infof("VerifiedObj ID: %s", verifiedObj.ID())
 
 	// ToDo: get a verified container object
+	// This is not very generic...
 	jsonSuccessResponse(&SecretResponse{
 		TempToken:  tempKey,
 		ExternalID: verifiedObj.ID(),
-		CubbyPath:  "cubbyhole/" + verifiedObj.Path(),
+		CubbyPath:  actors.secretStore.GetSecretStoreURL() + "/cubbyhole/" + verifiedObj.Path(),
 	}, w)
 
 	return nil

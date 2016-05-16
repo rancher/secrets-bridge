@@ -12,6 +12,7 @@ import (
 
 type SecureStore interface {
 	CreateSecretKey(verifier.VerifiedResponse) (string, error)
+	GetSecretStoreURL() string
 }
 
 type VaultClient struct {
@@ -155,6 +156,10 @@ func (vClient *VaultClient) CreateSecretKey(verified verifier.VerifiedResponse) 
 	}
 
 	return cubbyHoleKeys.TempToken().Auth.ClientToken, nil
+}
+
+func (vClient *VaultClient) GetSecretStoreURL() string {
+	return vClient.config.Address + "/v1"
 }
 
 func (vClient *VaultClient) GetAppPolicies(appPath string) ([]string, error) {
