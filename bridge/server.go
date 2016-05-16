@@ -112,8 +112,8 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 
 	if t.Action == "start" {
 		if err := ContainerStart(w, t); err != nil {
-			logrus.Errorf("Unverifiable: %s", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			logrus.Errorf("Unverified: %s", err)
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		return

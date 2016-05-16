@@ -97,6 +97,10 @@ func (j *JsonHandler) Handle(msg *events.Message) error {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != 201 {
+		return nil
+	}
+
 	var vaultThing VaultResponseThing
 	decoder := json.NewDecoder(resp.Body)
 	decoder.Decode(&vaultThing)

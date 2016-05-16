@@ -1,6 +1,8 @@
 package vault
 
 import (
+	"errors"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/hashicorp/vault/api"
 )
@@ -42,6 +44,10 @@ func NewCubbyhole(client *VaultClient, cubbyConfig *CubbyHoleConfig) (*CubbyHole
 		return nil, err
 	}
 	logrus.Infof("Got policies: %s", policies)
+
+	if len(policies) == 0 {
+		return nil, errors.New("No policies to attach")
+	}
 
 	permToken, err := createVaultToken(client, &api.TokenCreateRequest{
 		ID:              "",
