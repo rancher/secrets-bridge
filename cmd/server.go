@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/codegangsta/cli"
 	"github.com/rancher/secrets-bridge/bridge"
+	"github.com/urfave/cli"
 )
 
 func ServerCommand() cli.Command {

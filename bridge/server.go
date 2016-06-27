@@ -6,11 +6,11 @@ import (
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/codegangsta/cli"
 	"github.com/gorilla/mux"
 	"github.com/rancher/secrets-bridge/types"
 	"github.com/rancher/secrets-bridge/vault"
 	"github.com/rancher/secrets-bridge/verifier"
+	"github.com/urfave/cli"
 )
 
 const default_verifier string = "rancher"

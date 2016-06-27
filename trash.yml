@@ -1,6 +1,6 @@
 import:
-- package: github.com/codegangsta/cli
-  version: 71f57d300dd6a780ac1856c005c4b518cfd498ec
+- package: github.com/urfave/cli
+  version: 4205e9c4ee9672a8df5bb4fe486a8aa07e1e4037
 - package: github.com/docker/distribution
   version: cd27f179f2c10c5d300e6d09025b538c475b0d51
 - package: github.com/docker/engine-api
