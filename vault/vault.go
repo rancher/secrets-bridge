@@ -1,7 +1,12 @@
 package vault
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
+	"io/ioutil"
+	"net"
+	"net/http"
 	"strings"
 	"time"
 
@@ -28,10 +33,16 @@ func NewSecureStore(opts map[string]interface{}) (SecureStore, error) {
 }
 
 func NewVaultSecureStore(opts map[string]interface{}) (*VaultClient, error) {
+	var err error
 	config := api.DefaultConfig()
 
 	if url, ok := opts["vault-url"]; ok {
 		config.Address = url.(string)
+	}
+
+	config.HttpClient.Transport, err = buildTransport(opts)
+	if err != nil {
+		return nil, err
 	}
 
 	client, err := api.NewClient(config)
@@ -70,6 +81,31 @@ func NewVaultSecureStore(opts map[string]interface{}) (*VaultClient, error) {
 
 	return vaultClient, nil
 
+}
+
+func buildTransport(opts map[string]interface{}) (*http.Transport, error) {
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 10 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+		TLSClientConfig:     &tls.Config{},
+	}
+
+	if caCert, ok := opts["vault-cacert"]; ok {
+		cert, err := ioutil.ReadFile(caCert.(string))
+		if err != nil {
+			return transport, err
+		}
+
+		caPool := x509.NewCertPool()
+		caPool.AppendCertsFromPEM(cert)
+		transport.TLSClientConfig.RootCAs = caPool
+	}
+
+	return transport, nil
 }
 
 func (vc *VaultClient) manageIssuingTokenRefresh() {
@@ -201,6 +237,7 @@ func inspectSelfTokenForRole(secret *api.Secret) string {
 	}
 	return ""
 }
+
 func inspectSelfTokenForConfigPath(secret *api.Secret) (string, error) {
 	if secret.Data != nil {
 		if meta, ok := secret.Data["meta"].(map[string]interface{})["configPath"]; ok {

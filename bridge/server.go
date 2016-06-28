@@ -44,14 +44,18 @@ func StartServer(c *cli.Context) {
 }
 
 func initActors(c *cli.Context) (*serverActors, error) {
-	config := verifier.NewConfig(c.String("rancher-url"), c.String("rancher-access"), c.String("rancher-secret"))
-	rVerify, err := verifier.NewVerifier(default_verifier, config)
+	verifierConfig := verifier.NewConfig(
+		c.String("rancher-url"),
+		c.String("rancher-access"),
+		c.String("rancher-secret"))
+
+	rVerify, err := verifier.NewVerifier(default_verifier, verifierConfig)
 	if err != nil {
 		logrus.Fatalf("Can not get verifier client")
 		return nil, err
 	}
 
-	aVerify, err := verifier.NewAuthVerifier(default_verifier, config)
+	aVerify, err := verifier.NewAuthVerifier(default_verifier, verifierConfig)
 	if err != nil {
 		logrus.Fatalf("Can not get verifier client")
 		return nil, err
@@ -60,6 +64,7 @@ func initActors(c *cli.Context) (*serverActors, error) {
 	secretStoreConfig := map[string]interface{}{
 		"vault-token":     c.String("vault-token"),
 		"vault-url":       c.String("vault-url"),
+		"vault-cacert":    c.String("vault-cacert"),
 		"vault-cubbypath": c.String("vault-cubbypath"),
 	}
 
