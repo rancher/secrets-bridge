@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/codegangsta/cli"
 	"github.com/rancher/secrets-bridge/agent"
+	"github.com/urfave/cli"
 )
 
 func AgentCommand() cli.Command {

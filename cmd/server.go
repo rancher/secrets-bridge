@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/codegangsta/cli"
 	"github.com/rancher/secrets-bridge/bridge"
+	"github.com/urfave/cli"
 )
 
 func ServerCommand() cli.Command {
@@ -13,12 +13,17 @@ func ServerCommand() cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:  "vault-url",
-				Usage: "URL to Vault server. http://127.0.0.1:9000",
+				Usage: "URL to Vault server. http://127.0.0.1:8200",
 			},
 			cli.StringFlag{
 				Name:   "vault-token",
 				Usage:  "CubbyHole Vault Token to use to communicate with Vault",
 				EnvVar: "VAULT_TOKEN",
+			},
+			cli.StringFlag{
+				Name:   "vault-cacert",
+				Usage:  "CA Pem to use to communicate with Vault",
+				EnvVar: "VAULT_CA_CERT",
 			},
 			cli.StringFlag{
 				Name:   "vault-cubbypath",
