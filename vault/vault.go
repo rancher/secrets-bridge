@@ -213,7 +213,8 @@ func (vClient *VaultClient) GetAppPolicies(appPath string) ([]string, error) {
 	splitPath := strings.Split(appPath, "/")
 	for i := strings.Count(appPath, "/") + 1; i >= 0; i-- {
 		fullPath := vClient.envConfigPath + "/" + strings.Join(splitPath[:i], "/")
-		logrus.Infof("Trying path: %s", fullPath)
+
+		logrus.Debugf("Trying path: %s", fullPath)
 		secret, err := vClient.VClient.Logical().Read(fullPath)
 		if err != nil && i != 0 {
 			return policies, err
