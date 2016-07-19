@@ -95,14 +95,16 @@ func buildTransport(opts map[string]interface{}) (*http.Transport, error) {
 	}
 
 	if caCert, ok := opts["vault-cacert"]; ok {
-		cert, err := ioutil.ReadFile(caCert.(string))
-		if err != nil {
-			return transport, err
-		}
+		if caCert != "" {
+			cert, err := ioutil.ReadFile(caCert.(string))
+			if err != nil {
+				return transport, err
+			}
 
-		caPool := x509.NewCertPool()
-		caPool.AppendCertsFromPEM(cert)
-		transport.TLSClientConfig.RootCAs = caPool
+			caPool := x509.NewCertPool()
+			caPool.AppendCertsFromPEM(cert)
+			transport.TLSClientConfig.RootCAs = caPool
+		}
 	}
 
 	return transport, nil
