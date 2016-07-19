@@ -118,35 +118,31 @@ func (vc *VaultClient) manageIssuingTokenRefresh() {
 		}
 
 		if secret.Data != nil {
-			renewIncrement, ok := secret.Data["creation_ttl"]
-			if !ok {
-				logrus.Fatal("No creation_ttl set, likely can not renew")
-			}
+			renewIncrement := int(secret.Data["creation_ttl"].(float64))
 
-			renewalChannel := make(chan int)
+			renewalChannel := make(chan bool)
 
 			remainingTime, err := getSecretTTL(secret)
 			if err != nil {
 				logrus.Fatal("Issuing token has no TTL, has it expired")
 			}
 
-			go scheduleTimer(int(remainingTime), renewalChannel)
+			logrus.Infof("Scheduling refreshes for token every: %d", remainingTime)
+			go scheduleTimer(calculateRefreshDuration(remainingTime), renewalChannel)
 
 			for {
 				select {
 				case <-renewalChannel:
 					logrus.Infof("Processing issuing token renewal")
-					renewedSecret, err := vc.VClient.Auth().Token().RenewSelf(int(renewIncrement.(float64)))
+					renewedSecret, err := vc.VClient.Auth().Token().RenewSelf(renewIncrement)
 					if err != nil {
 						logrus.Errorf("Could not renew token: %s", err)
 					}
 
-					remainingTime, err = getSecretTTL(renewedSecret)
+					remainingTime, err = getSecretAuthTTL(renewedSecret.Auth)
 					if err != nil {
 						logrus.Fatal("Issuing token has no TTL, has it expired")
 					}
-
-					go scheduleTimer(int(remainingTime), renewalChannel)
 				}
 			}
 		}
@@ -154,25 +150,35 @@ func (vc *VaultClient) manageIssuingTokenRefresh() {
 	}()
 }
 
-func getSecretTTL(secret *api.Secret) (float64, error) {
-	remainingTime, ok := secret.Data["ttl"]
+func getSecretTTL(secret *api.Secret) (int, error) {
+	remainingTime, ok := secret.Data["ttl"].(float64)
 	if !ok {
 		logrus.Fatal("Issuing token has no TTL Value.")
 	}
-	return remainingTime.(float64), nil
+	return int(remainingTime), nil
 }
 
-func calculateDuration(remainingTime int) int {
-	if remainingTime > 300 {
-		return remainingTime - 300
+func getSecretAuthTTL(secret *api.SecretAuth) (int, error) {
+	remainingTime := secret.LeaseDuration
+	if remainingTime == 0 {
+		logrus.Fatal("Issuing token has no TTL Value.")
 	}
-	// this is hacky, but if its within 5 minutes... renew now
+	return remainingTime, nil
+}
+
+func calculateRefreshDuration(remainingTime int) int {
+	if remainingTime > 180 {
+		return remainingTime - 180
+	}
+	// this is hacky and could DDoS vault, but if its within 3 minutes... renew now
 	return 1
 }
 
-func scheduleTimer(duration int, notify chan int) {
-	time.Sleep(time.Duration(duration) * time.Second)
-	notify <- 1
+func scheduleTimer(duration int, notify chan bool) {
+	for {
+		time.Sleep(time.Duration(duration) * time.Second)
+		notify <- true
+	}
 }
 
 // We create cubbyholes in order to pass credentials
@@ -212,7 +218,7 @@ func (vClient *VaultClient) GetAppPolicies(appPath string) ([]string, error) {
 		if err != nil && i != 0 {
 			return policies, err
 		}
-		logrus.Infof("secret: %#v", secret)
+
 		if secret != nil {
 			if policies, ok := secret.Data["policies"]; ok {
 				return strings.Split(policies.(string), ","), nil
