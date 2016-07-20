@@ -115,7 +115,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if t.Action == "start" {
+	if t.Action == "start" && t.UUID != "" {
 		if err := ContainerStart(w, t); err != nil {
 			logrus.Errorf("Unverified: %s", err)
 			w.WriteHeader(http.StatusNotFound)

@@ -205,7 +205,6 @@ func (j *JsonHandler) getUUIDFromMetadata(name string) (string, error) {
 		return "", err
 	}
 
-	logrus.Infof("Containers: %#v", containers)
 	for _, container := range containers {
 		if container.Name == name {
 			uuid = container.UUID

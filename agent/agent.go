@@ -21,6 +21,7 @@ func StartAgent(c *cli.Context) {
 
 	filterArgs := filters.NewArgs()
 	filterArgs.Add("event", "start")
+	filterArgs.Add("label", "secrets.bridge.enabled=true")
 
 	eventOptions := types.EventsOptions{
 		Filters: filterArgs,
