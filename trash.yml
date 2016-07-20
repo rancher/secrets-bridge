@@ -26,7 +26,11 @@ import:
 - package: github.com/hashicorp/hcl
   version: 9a905a34e6280ce905da1a32344b25e81011197a
 - package: github.com/hashicorp/vault
-  version: 250aa228df1303a383f852a4a2f71a3195e681c6
+  version: 46ecb9a660059e7aa84df7e42b35f8ea7b92b443
+- package: github.com/hashicorp/go-rootcerts
+  version: 6bb64b370b90e7ef1fa532be9e591a81c3493e00
+- package: github.com/sethgrid/pester
+  version: 8053687f99650573b28fb75cddf3f295082704d7
 - package: github.com/mitchellh/mapstructure
   version: d2dd0262208475919e1a362f675cfc0e7c10e905
 - package: github.com/opencontainers/runc

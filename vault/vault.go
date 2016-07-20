@@ -3,6 +3,7 @@ package vault
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"net"
@@ -118,7 +119,10 @@ func (vc *VaultClient) manageIssuingTokenRefresh() {
 		}
 
 		if secret.Data != nil {
-			renewIncrement := int(secret.Data["creation_ttl"].(float64))
+			renewalIncrement, err := getIntFromJsonInterface(secret.Data["creation_ttl"])
+			if err != nil {
+				logrus.Fatal(err)
+			}
 
 			renewalChannel := make(chan bool)
 
@@ -134,7 +138,7 @@ func (vc *VaultClient) manageIssuingTokenRefresh() {
 				select {
 				case <-renewalChannel:
 					logrus.Infof("Processing issuing token renewal")
-					renewedSecret, err := vc.VClient.Auth().Token().RenewSelf(renewIncrement)
+					renewedSecret, err := vc.VClient.Auth().Token().RenewSelf(renewalIncrement)
 					if err != nil {
 						logrus.Errorf("Could not renew token: %s", err)
 					}
@@ -150,12 +154,29 @@ func (vc *VaultClient) manageIssuingTokenRefresh() {
 	}()
 }
 
+func getIntFromJsonInterface(value interface{}) (int, error) {
+	var val int
+
+	switch v := value.(type) {
+	case float64:
+		val = int(v)
+	case json.Number:
+		intermediate, err := v.Float64()
+		if err != nil {
+			return val, err
+		}
+		val = int(intermediate)
+	}
+
+	return val, nil
+}
+
 func getSecretTTL(secret *api.Secret) (int, error) {
-	remainingTime, ok := secret.Data["ttl"].(float64)
+	remainingTime, ok := secret.Data["ttl"]
 	if !ok {
 		logrus.Fatal("Issuing token has no TTL Value.")
 	}
-	return int(remainingTime), nil
+	return getIntFromJsonInterface(remainingTime)
 }
 
 func getSecretAuthTTL(secret *api.SecretAuth) (int, error) {
