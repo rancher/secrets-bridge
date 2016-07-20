@@ -36,9 +36,9 @@ import:
 - package: github.com/opencontainers/runc
   version: ae0fc15b1e969b06fa575638d234feaa1596d69c
 - package: github.com/rancher/go-rancher
-  version: c21ad7797bc727e5fe65ae85d1be714845ce415c
+  version: 8e54b49532eca88e1bed40dcf0c7d29ddfe5a630
 - package: github.com/rancher/go-rancher-metadata
-  version: 802039712650f3d2035179ec6c416093e58efa29
+  version: 524187cee8326c13b4d85b0a237b4f89653d76c4
 - package: github.com/rancher/trash
   version: 8c623b6961c66b566a73e05c588235d6b88afefe
 - package: github.com/Sirupsen/logrus

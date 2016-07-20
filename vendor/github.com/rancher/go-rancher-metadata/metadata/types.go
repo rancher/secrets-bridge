@@ -2,6 +2,7 @@ package metadata
 
 type Stack struct {
 	EnvironmentName string    `json:"environment_name"`
+	EnvironmentUUID string    `json:"environment_uuid"`
 	Name            string    `json:"name"`
 	Services        []Service `json:"services"`
 }
@@ -37,12 +38,14 @@ type Container struct {
 	HostUUID    string            `json:"host_uuid"`
 	UUID        string            `json:"uuid"`
 	HealthState string            `json:"health_state"`
+	ExternalId  string            `json:"external_id"`
 }
 
 type Host struct {
-	Name    string            `json:"name"`
-	AgentIP string            `json:"agent_ip"`
-	HostId  int               `json:"host_id"`
-	Labels  map[string]string `json:"labels"`
-	UUID    string            `json:"uuid"`
+	Name     string            `json:"name"`
+	AgentIP  string            `json:"agent_ip"`
+	HostId   int               `json:"host_id"`
+	Labels   map[string]string `json:"labels"`
+	UUID     string            `json:"uuid"`
+	Hostname string            `json:"hostname"`
 }

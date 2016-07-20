@@ -54,6 +54,20 @@ func (m *Client) GetVersion() (string, error) {
 	return string(resp[:]), nil
 }
 
+func (m *Client) GetSelfHost() (Host, error) {
+	resp, err := m.SendRequest("/self/host")
+	var host Host
+	if err != nil {
+		return host, err
+	}
+
+	if err = json.Unmarshal(resp, &host); err != nil {
+		return host, err
+	}
+
+	return host, nil
+}
+
 func (m *Client) GetSelfContainer() (Container, error) {
 	resp, err := m.SendRequest("/self/container")
 	var container Container
