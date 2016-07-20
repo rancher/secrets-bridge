@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/mitchellh/mapstructure"
@@ -40,13 +41,16 @@ type SSHHelper struct {
 type SSHVerifyResponse struct {
 	// Usually empty. If the request OTP is echo request message, this will
 	// be set to the corresponding echo response message.
-	Message string `mapstructure:"message"`
+	Message string `json:"message" structs:"message" mapstructure:"message"`
 
 	// Username associated with the OTP
-	Username string `mapstructure:"username"`
+	Username string `json:"username" structs:"username" mapstructure:"username"`
 
 	// IP associated with the OTP
-	IP string `mapstructure:"ip"`
+	IP string `json:"ip" structs:"ip" mapstructure:"ip"`
+
+	// Name of the role against which the OTP was issued
+	RoleName string `json:"role_name" structs:"role_name" mapstructure:"role_name"`
 }
 
 // SSHHelperConfig is a structure which represents the entries from the vault-ssh-helper's configuration file.
@@ -56,6 +60,7 @@ type SSHHelperConfig struct {
 	CACert          string `hcl:"ca_cert"`
 	CAPath          string `hcl:"ca_path"`
 	AllowedCidrList string `hcl:"allowed_cidr_list"`
+	AllowedRoles    string `hcl:"allowed_roles"`
 	TLSSkipVerify   bool   `hcl:"tls_skip_verify"`
 }
 
@@ -85,17 +90,14 @@ func (c *SSHHelperConfig) NewClient() (*Client, error) {
 
 	// Check if certificates are provided via config file.
 	if c.CACert != "" || c.CAPath != "" || c.TLSSkipVerify {
-		var certPool *x509.CertPool
-		var err error
-		if c.CACert != "" {
-			certPool, err = LoadCACert(c.CACert)
-		} else if c.CAPath != "" {
-			certPool, err = LoadCAPath(c.CAPath)
+		rootConfig := &rootcerts.Config{
+			CAFile: c.CACert,
+			CAPath: c.CAPath,
 		}
+		certPool, err := rootcerts.LoadCACerts(rootConfig)
 		if err != nil {
 			return nil, err
 		}
-
 		// Enable TLS on the HTTP client information
 		c.SetTLSParameters(clientConfig, certPool)
 	}
@@ -141,6 +143,7 @@ func ParseSSHHelperConfig(contents string) (*SSHHelperConfig, error) {
 		"ca_cert",
 		"ca_path",
 		"allowed_cidr_list",
+		"allowed_roles",
 		"tls_skip_verify",
 	}
 	if err := checkHCLKeys(list, valid); err != nil {

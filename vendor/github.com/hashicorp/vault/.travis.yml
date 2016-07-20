@@ -1,9 +1,12 @@
-sudo: false
+sudo: required
 
 language: go
 
+services:
+  - docker
+
 go:
-  - 1.6
+  - 1.6.2
 # tip is currently using go1.4.1, which we're not compatible with, so always
 # fails
 #  - tip
