@@ -118,7 +118,12 @@ func (vc *VaultClient) manageIssuingTokenRefresh() {
 		}
 
 		if secret.Data != nil {
-			renewIncrement := int(secret.Data["creation_ttl"].(float64))
+			rIncrement := secret.Data["creation_ttl"]
+			logrus.Infof("renewInc: %T", rIncrement)
+			logrus.Infof("renewInc: %#v", rIncrement)
+			logrus.Infof("renewInc: %v", rIncrement)
+
+			renewIncrement := int(rIncrement.(float64))
 
 			renewalChannel := make(chan bool)
 
@@ -151,11 +156,11 @@ func (vc *VaultClient) manageIssuingTokenRefresh() {
 }
 
 func getSecretTTL(secret *api.Secret) (int, error) {
-	remainingTime, ok := secret.Data["ttl"].(float64)
+	remainingTime, ok := secret.Data["ttl"]
 	if !ok {
 		logrus.Fatal("Issuing token has no TTL Value.")
 	}
-	return int(remainingTime), nil
+	return int(remainingTime.(float64)), nil
 }
 
 func getSecretAuthTTL(secret *api.SecretAuth) (int, error) {
