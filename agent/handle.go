@@ -83,6 +83,9 @@ func NewMessageHandler(opts map[string]interface{}) (MessageHandler, error) {
 
 func (j *JsonHandler) Handle(msg *events.Message) error {
 	message, err := j.buildRequestMessage(msg)
+	if err != nil {
+		return err
+	}
 
 	jMsg, err := json.Marshal(message)
 	if err != nil {
@@ -202,6 +205,7 @@ func (j *JsonHandler) getUUIDFromMetadata(name string) (string, error) {
 		return "", err
 	}
 
+	logrus.Infof("Containers: %#v", containers)
 	for _, container := range containers {
 		if container.Name == name {
 			uuid = container.UUID
