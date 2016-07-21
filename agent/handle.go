@@ -118,7 +118,7 @@ func (j *JsonHandler) Handle(msg *events.Message) error {
 
 func (j *JsonHandler) buildRequestMessage(msg *events.Message) (*ContainerEventMessage, error) {
 	message := &ContainerEventMessage{}
-	logrus.Infof("Received action: %s, from container: %s", msg.Action, msg.ID)
+	logrus.Debugf("Received action: %s, from container: %s", msg.Action, msg.ID)
 
 	message.Event = msg
 	message.Action = msg.Action

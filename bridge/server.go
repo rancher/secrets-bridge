@@ -156,9 +156,9 @@ func ContainerStart(w http.ResponseWriter, msg *types.Message) error {
 		}
 	}
 
-	logrus.Infof("VerifiedObj: %#v", verifiedObj)
-	logrus.Infof("VerifiedObj Path: %s", verifiedObj.Path())
-	logrus.Infof("VerifiedObj ID: %s", verifiedObj.ID())
+	logrus.Debugf("VerifiedObj: %#v", verifiedObj)
+	logrus.Debugf("VerifiedObj Path: %s", verifiedObj.Path())
+	logrus.Debugf("VerifiedObj ID: %s", verifiedObj.ID())
 
 	// ToDo: get a verified container object
 	// This is not very generic...
