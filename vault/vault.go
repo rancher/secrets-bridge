@@ -131,7 +131,6 @@ func (vc *VaultClient) manageIssuingTokenRefresh() {
 				logrus.Fatal("Issuing token has no TTL, has it expired")
 			}
 
-			logrus.Infof("Scheduling refreshes for token every: %d", remainingTime)
 			go scheduleTimer(calculateRefreshDuration(remainingTime), renewalChannel)
 
 			for {
@@ -140,7 +139,7 @@ func (vc *VaultClient) manageIssuingTokenRefresh() {
 					logrus.Infof("Processing issuing token renewal")
 					renewedSecret, err := vc.VClient.Auth().Token().RenewSelf(renewalIncrement)
 					if err != nil {
-						logrus.Errorf("Could not renew token: %s", err)
+						logrus.Fatalf("Could not renew token: %s", err)
 					}
 
 					remainingTime, err = getSecretAuthTTL(renewedSecret.Auth)
@@ -188,14 +187,17 @@ func getSecretAuthTTL(secret *api.SecretAuth) (int, error) {
 }
 
 func calculateRefreshDuration(remainingTime int) int {
-	if remainingTime > 180 {
-		return remainingTime - 180
-	}
 	// this is hacky and could DDoS vault, but if its within 3 minutes... renew now
-	return 1
+	refresh := 1
+
+	if remainingTime > 180 {
+		refresh = remainingTime - 180
+	}
+	return refresh
 }
 
 func scheduleTimer(duration int, notify chan bool) {
+	logrus.Debugf("Scheduling refresh timer for: %d", duration)
 	for {
 		time.Sleep(time.Duration(duration) * time.Second)
 		notify <- true

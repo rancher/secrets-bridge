@@ -49,6 +49,7 @@ func NewRancherVerifier(config *VerifierConfig) (*RancherVerifier, error) {
 		Url:       config.RancherUrl,
 		AccessKey: config.rancherAccessKey,
 		SecretKey: config.rancherSecretKey,
+		Timeout:   10 * time.Second,
 	})
 	if err != nil {
 		return nil, err

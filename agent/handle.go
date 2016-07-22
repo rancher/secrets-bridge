@@ -22,10 +22,11 @@ import (
 )
 
 type ContainerEventMessage struct {
-	Event  *events.Message
-	UUID   string `json:"UUID"`
-	Action string `json:"Action"`
-	Host   string `json:"Host"`
+	Event         *events.Message
+	UUID          string `json:"UUID"`
+	Action        string `json:"Action"`
+	Host          string `json:"Host"`
+	ContainerType string `json:"container_type"`
 }
 
 type VaultResponseThing struct {
@@ -117,13 +118,30 @@ func (j *JsonHandler) Handle(msg *events.Message) error {
 }
 
 func (j *JsonHandler) buildRequestMessage(msg *events.Message) (*ContainerEventMessage, error) {
-	message := &ContainerEventMessage{}
+	message := &ContainerEventMessage{ContainerType: "cattle"}
+	nameKey := "name"
 	logrus.Debugf("Received action: %s, from container: %s", msg.Action, msg.ID)
+
+	if _, ok := msg.Actor.Attributes["io.kubernetes.pod.namespace"]; ok {
+		logrus.Debugf("Container type is Kubernetes")
+
+		if !j.checkForK8sSecretsLabel(msg) {
+			return message, errors.New("Secrets bridge key not found")
+		}
+		message.ContainerType = "kubernetes"
+		nameKey = "io.kubernetes.pod.name"
+	}
+
+	if message.ContainerType == "cattle" {
+		if val, ok := msg.Actor.Attributes["secrets.bridge.enabled"]; !ok || val != "true" {
+			return message, errors.New("Secrets bridge not enabled")
+		}
+	}
 
 	message.Event = msg
 	message.Action = msg.Action
 
-	uuid, err := j.getUUIDFromMetadata(message.Event.Actor.Attributes["name"])
+	uuid, err := j.getUUIDFromMetadata(message.Event.Actor.Attributes[nameKey])
 	if err != nil {
 		return message, err
 	}
@@ -195,9 +213,10 @@ func formatMessage(message *VaultResponseThing) string {
 
 func (j *JsonHandler) getUUIDFromMetadata(name string) (string, error) {
 	var uuid string
+	logrus.Debugf("Received: %s as a container name", name)
 
-	// I feel like this is going to be a problem some day.
 	name = strings.Replace(name, "r-", "", 1)
+	logrus.Debugf("Using: %s as a container name", name)
 
 	containers, err := j.metadataCli.GetContainers()
 	if err != nil {
@@ -213,8 +232,36 @@ func (j *JsonHandler) getUUIDFromMetadata(name string) (string, error) {
 	}
 
 	if uuid == "" {
+		logrus.Debugf("No UUID Found")
 		return uuid, errors.New("No UUID found")
 	}
 
 	return uuid, nil
+}
+
+func (j *JsonHandler) checkForK8sSecretsLabel(msg *events.Message) bool {
+	enabled := false
+	var labels map[string]string
+
+	name := msg.Actor.Attributes["io.kubernetes.pod.name"]
+
+	containers, err := j.metadataCli.GetContainers()
+	if err != nil {
+		return enabled
+	}
+
+	for _, container := range containers {
+		if container.Name == name {
+			labels = container.Labels
+			break
+		}
+	}
+
+	if secretEnabled, ok := labels["secrets.bridge.enabled"]; ok {
+		if secretEnabled == "true" {
+			enabled = true
+		}
+	}
+
+	return enabled
 }

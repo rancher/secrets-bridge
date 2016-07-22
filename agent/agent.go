@@ -21,7 +21,6 @@ func StartAgent(c *cli.Context) {
 
 	filterArgs := filters.NewArgs()
 	filterArgs.Add("event", "start")
-	filterArgs.Add("label", "secrets.bridge.enabled=true")
 
 	eventOptions := types.EventsOptions{
 		Filters: filterArgs,
@@ -43,12 +42,12 @@ func StartAgent(c *cli.Context) {
 
 	logrus.Info("Entering event listening Loop")
 	d := json.NewDecoder(eventsResp)
-	var msg events.Message
 	for {
-		d.Decode(&msg)
+		msg := &events.Message{}
+		d.Decode(msg)
 
 		// For now... will need to add some throttling at some point.
-		go handler.Handle(&msg)
+		go handler.Handle(msg)
 	}
 
 	os.Exit(0)
