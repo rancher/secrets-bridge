@@ -61,18 +61,20 @@ func NewRancherVerifier(config *VerifierConfig) (*RancherVerifier, error) {
 }
 
 func (c *RancherVerifier) Verify(msg *types.Message) (VerifiedResponse, error) {
-	resp := &RancherVerifiedResponse{}
+	resp, _ := NewVerifiedResponse(msg)
+
 	logrus.Infof("Verifing: %s", msg.UUID)
 	logrus.Debugf("Verifing: %s", msg.Action)
 	logrus.Debugf("Verifing: %s", msg.Host)
+	logrus.Debugf("Verifing: %s", msg.ContainerType)
 
 	container, err := c.requestCompleteContainerFromRancher(msg.UUID)
 	if err != nil {
 		return resp, err
 	}
 
-	if matchInfo(msg, container) {
-		resp, err = c.prepareResponse(true, &container)
+	if c.matchInfo(msg, container) {
+		err = resp.PrepareResponse(true, &container, c.client)
 		if err != nil {
 			return resp, err
 		}
@@ -101,7 +103,39 @@ func (c *RancherVerifier) VerifyAuth(authString string) (bool, error) {
 	return verified, nil
 }
 
-func matchInfo(msg *types.Message, container client.Container) bool {
+func (c *RancherVerifier) matchInfo(msg *types.Message, container client.Container) bool {
+	switch msg.ContainerType {
+	case "cattle":
+		return matchInfoCattle(msg, container)
+	case "kubernetes":
+		return c.matchInfoK8s(msg, container)
+	}
+	return false
+}
+
+func (c *RancherVerifier) matchInfoK8s(msg *types.Message, container client.Container) bool {
+	isVerified := false
+
+	logrus.Debugf("rancher k8s pod uid: %s for eventId: %s", container.Labels["io.kubernetes.pod.uid"], msg.Event.ID)
+
+	eventIdContainer, err := c.requestContainer(&client.ListOpts{
+		Filters: map[string]interface{}{
+			"externalId": msg.Event.ID,
+		},
+	})
+	if err != nil {
+		return false
+	}
+
+	if container.Labels["io.kubernetes.pod.uid"] == eventIdContainer.Labels["io.kubernetes.pod.uid"] {
+		logrus.Debugf("Pod UUID: %s and %s match", container.Labels["io.kubernetes.pod.uid"], eventIdContainer.Labels["io.kubernetes.pod.uid"])
+		isVerified = true
+	}
+
+	return isVerified
+}
+
+func matchInfoCattle(msg *types.Message, container client.Container) bool {
 	isVerified := false
 
 	logrus.Debugf("rancher ext id: %s for eventId: %s", container.ExternalId, msg.Event.ID)
@@ -116,15 +150,20 @@ func matchInfo(msg *types.Message, container client.Container) bool {
 }
 
 func (c *RancherVerifier) requestCompleteContainerFromRancher(uuid string) (client.Container, error) {
+	listOpts := &client.ListOpts{
+		Filters: map[string]interface{}{
+			"uuid": uuid,
+		},
+	}
+	return c.requestContainer(listOpts)
+}
+
+func (c *RancherVerifier) requestContainer(opts *client.ListOpts) (client.Container, error) {
 	maxWaitTime := 60 * time.Second
 	var container client.Container
 
 	for i := 1 * time.Second; i < maxWaitTime; i *= time.Duration(2) {
-		containers, err := c.client.Container.List(&client.ListOpts{
-			Filters: map[string]interface{}{
-				"uuid": uuid,
-			},
-		})
+		containers, err := c.client.Container.List(opts)
 		if err != nil {
 			return client.Container{}, err
 		}
@@ -141,61 +180,4 @@ func (c *RancherVerifier) requestCompleteContainerFromRancher(uuid string) (clie
 	}
 
 	return container, nil
-}
-
-func (c *RancherVerifier) prepareResponse(verified bool, container *client.Container) (*RancherVerifiedResponse, error) {
-	svc, err := getServiceFromContainer(c.client, container)
-	if err != nil {
-		return nil, err
-	}
-
-	stk, err := getStackFromService(c.client, svc)
-	if err != nil {
-		return nil, err
-	}
-
-	env, err := getEnvFromStack(c.client, stk)
-	if err != nil {
-		return nil, err
-	}
-
-	// Should probably get a New or Init method...
-	resp := &RancherVerifiedResponse{
-		verified:        verified,
-		serviceName:     svc.Name,
-		stackName:       stk.Name,
-		environmentName: env.Name,
-		containerName:   container.Name,
-		id:              container.ExternalId,
-	}
-
-	return resp, nil
-}
-
-func getServiceFromContainer(c *client.RancherClient, container *client.Container) (*client.Service, error) {
-	var svc *client.ServiceCollection
-	err := c.GetLink(container.Resource, "services", &svc)
-	if err != nil || len(svc.Data) == 0 {
-		return nil, err
-	}
-
-	return &svc.Data[0], nil
-}
-
-func getStackFromService(c *client.RancherClient, service *client.Service) (*client.Environment, error) {
-	var stack *client.Environment
-	err := c.GetLink(service.Resource, "environment", &stack)
-	if err != nil || stack.Name == "" {
-		return nil, err
-	}
-	return stack, nil
-}
-
-func getEnvFromStack(c *client.RancherClient, stk *client.Environment) (*client.Project, error) {
-	var environment *client.Project
-	err := c.GetLink(stk.Resource, "account", &environment)
-	if err != nil || environment.Name == "" {
-		return nil, err
-	}
-	return environment, nil
 }
