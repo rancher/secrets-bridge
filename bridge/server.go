@@ -115,7 +115,8 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if t.Action == "start" {
+	if t.Action == "start" && t.UUID != "" {
+		logrus.Debugf("Received start event for container UUID: %s", t.UUID)
 		if err := ContainerStart(w, t); err != nil {
 			logrus.Errorf("Unverified: %s", err)
 			w.WriteHeader(http.StatusNotFound)
@@ -156,9 +157,10 @@ func ContainerStart(w http.ResponseWriter, msg *types.Message) error {
 		}
 	}
 
-	logrus.Infof("VerifiedObj: %#v", verifiedObj)
-	logrus.Infof("VerifiedObj Path: %s", verifiedObj.Path())
-	logrus.Infof("VerifiedObj ID: %s", verifiedObj.ID())
+	logrus.Debugf("VerifiedObj: %#v", verifiedObj)
+	logrus.Debugf("VerifiedObj Path: %s", verifiedObj.Path())
+	logrus.Debugf("VerifiedObj ID: %s", verifiedObj.ID())
+	logrus.Debugf("TempKey ID: %s", tempKey)
 
 	// ToDo: get a verified container object
 	// This is not very generic...

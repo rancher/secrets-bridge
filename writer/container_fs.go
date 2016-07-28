@@ -33,6 +33,9 @@ func NewDockerContainerFSWriter(opts map[string]interface{}) (*DockerContainerFS
 }
 
 func (d *DockerContainerFSWriter) Write() error {
+	// this will log the temp token.. but with short TTLs
+	// the debug value outweighs the risk.
+	logrus.Debugf("Writing message: %#v", d.message)
 	files := []archive.ArchiveFile{
 		{"secrets.txt", d.message},
 	}

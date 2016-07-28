@@ -42,12 +42,12 @@ func StartAgent(c *cli.Context) {
 
 	logrus.Info("Entering event listening Loop")
 	d := json.NewDecoder(eventsResp)
-	var msg events.Message
 	for {
-		d.Decode(&msg)
+		msg := &events.Message{}
+		d.Decode(msg)
 
 		// For now... will need to add some throttling at some point.
-		go handler.Handle(&msg)
+		go handler.Handle(msg)
 	}
 
 	os.Exit(0)

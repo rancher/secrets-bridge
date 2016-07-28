@@ -23,7 +23,7 @@ type CubbyHoleKeys struct {
 func NewCubbyhole(client *VaultClient, cubbyConfig *CubbyHoleConfig) (*CubbyHoleKeys, error) {
 	metadata := make(map[string]string)
 
-	logrus.Infof("Getting Temp Token")
+	logrus.Debugf("Getting temp token for path: %s", cubbyConfig.Path)
 	tempToken, err := createVaultToken(client, &api.TokenCreateRequest{
 		ID:              "",
 		Policies:        []string{"default"},
@@ -43,7 +43,7 @@ func NewCubbyhole(client *VaultClient, cubbyConfig *CubbyHoleConfig) (*CubbyHole
 	if err != nil {
 		return nil, err
 	}
-	logrus.Infof("Got policies: %s", policies)
+	logrus.Debugf("Got policies: %s", policies)
 
 	if len(policies) == 0 {
 		return nil, errors.New("No policies to attach")

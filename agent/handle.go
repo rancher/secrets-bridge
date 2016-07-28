@@ -15,17 +15,17 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/engine-api/client"
 	"github.com/docker/engine-api/types/events"
 	"github.com/rancher/go-rancher-metadata/metadata"
 	"github.com/rancher/secrets-bridge/writer"
 )
 
 type ContainerEventMessage struct {
-	Event  *events.Message
-	UUID   string `json:"UUID"`
-	Action string `json:"Action"`
-	Host   string `json:"Host"`
+	Event         *events.Message
+	UUID          string `json:"UUID"`
+	Action        string `json:"Action"`
+	Host          string `json:"Host"`
+	ContainerType string `json:"container_type"`
 }
 
 type VaultResponseThing struct {
@@ -83,6 +83,9 @@ func NewMessageHandler(opts map[string]interface{}) (MessageHandler, error) {
 
 func (j *JsonHandler) Handle(msg *events.Message) error {
 	message, err := j.buildRequestMessage(msg)
+	if err != nil {
+		return err
+	}
 
 	jMsg, err := json.Marshal(message)
 	if err != nil {
@@ -105,8 +108,12 @@ func (j *JsonHandler) Handle(msg *events.Message) error {
 	decoder := json.NewDecoder(resp.Body)
 	decoder.Decode(&vaultThing)
 
+	logrus.Debugf("Got Response: %#v", vaultThing)
+
 	err = writeResponse(&vaultThing)
 	if err != nil {
+		logrus.Errorf("Error: writing response to %s", vaultThing.ExternalId)
+		logrus.Error(err)
 		return err
 	}
 
@@ -114,13 +121,33 @@ func (j *JsonHandler) Handle(msg *events.Message) error {
 }
 
 func (j *JsonHandler) buildRequestMessage(msg *events.Message) (*ContainerEventMessage, error) {
-	message := &ContainerEventMessage{}
-	logrus.Infof("Received action: %s, from container: %s", msg.Action, msg.ID)
+	message := &ContainerEventMessage{
+		ContainerType: "cattle",
+	}
+
+	nameKey := "name"
+	logrus.Debugf("Received action: %s, from container: %s", msg.Action, msg.ID)
+
+	if _, ok := msg.Actor.Attributes["io.kubernetes.pod.namespace"]; ok {
+		logrus.Debugf("Container type is Kubernetes")
+
+		if !j.checkForK8sSecretsLabel(msg) {
+			return message, errors.New("Secrets bridge key not found")
+		}
+		message.ContainerType = "kubernetes"
+		nameKey = "io.kubernetes.pod.name"
+	}
+
+	if message.ContainerType == "cattle" {
+		if val, ok := msg.Actor.Attributes["secrets.bridge.enabled"]; !ok || val != "true" {
+			return message, errors.New("Secrets bridge not enabled")
+		}
+	}
 
 	message.Event = msg
 	message.Action = msg.Action
 
-	uuid, err := j.getUUIDFromMetadata(message.Event.Actor.Attributes["name"])
+	uuid, err := j.getUUIDFromMetadata(message.Event.Actor.Attributes[nameKey])
 	if err != nil {
 		return message, err
 	}
@@ -130,6 +157,8 @@ func (j *JsonHandler) buildRequestMessage(msg *events.Message) (*ContainerEventM
 	if err != nil {
 		return message, err
 	}
+
+	logrus.Debugf("Packaged Message: %#v", message)
 
 	return message, nil
 }
@@ -165,8 +194,7 @@ func (j *JsonHandler) postRequestToSecretBridge(buffer *bytes.Buffer) (*http.Res
 }
 
 func writeResponse(message *VaultResponseThing) error {
-	defaultHeaders := map[string]string{"User-Agent": "engine-api-cli-1.0"}
-	cli, err := client.NewClient("unix:///var/run/docker.sock", "v1.22", nil, defaultHeaders)
+	cli, err := getDockerClient()
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -192,9 +220,10 @@ func formatMessage(message *VaultResponseThing) string {
 
 func (j *JsonHandler) getUUIDFromMetadata(name string) (string, error) {
 	var uuid string
+	logrus.Debugf("Received: %s as a container name", name)
 
-	// I feel like this is going to be a problem some day.
 	name = strings.Replace(name, "r-", "", 1)
+	logrus.Debugf("Using: %s as a container name", name)
 
 	containers, err := j.metadataCli.GetContainers()
 	if err != nil {
@@ -210,8 +239,40 @@ func (j *JsonHandler) getUUIDFromMetadata(name string) (string, error) {
 	}
 
 	if uuid == "" {
+		logrus.Debugf("No UUID Found")
 		return uuid, errors.New("No UUID found")
 	}
+	logrus.Debugf("UUID: %s found", uuid)
 
 	return uuid, nil
+}
+
+func (j *JsonHandler) checkForK8sSecretsLabel(msg *events.Message) bool {
+	enabled := false
+	var labels map[string]string
+
+	name := msg.Actor.Attributes["io.kubernetes.pod.name"]
+	logrus.Debugf("Pod Name: %s", name)
+
+	containers, err := j.metadataCli.GetContainers()
+	if err != nil {
+		return enabled
+	}
+
+	for _, container := range containers {
+		if container.Name == name {
+			labels = container.Labels
+			break
+		}
+	}
+
+	logrus.Debugf("Labels found: %#v", labels)
+
+	if secretEnabled, ok := labels["secrets.bridge.enabled"]; ok {
+		if secretEnabled == "true" {
+			enabled = true
+		}
+	}
+
+	return enabled
 }
