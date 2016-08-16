@@ -128,8 +128,8 @@ curl -s -X POST -H "X-Vault-Token: ${VAULT_TOKEN}" -d '{"allowed_policies": "def
 ##### Step 5: Assign policies to applications
 
 ```
-vault write secrets/secrets-bridge/Default/Stack1/app1 policies=default,app1
-vault write secrets/secrets-bridge/Default/Stack2/app2 policies=default,app2
+vault write secret/secrets-bridge/Default/Stack1/app1 policies=default,app1
+vault write secret/secrets-bridge/Default/Stack2/app2 policies=default,app2
 ```
 
 ##### Step 6: Configure Vault for Secrets-Bridge startup
