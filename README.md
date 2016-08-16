@@ -11,7 +11,7 @@
 
 ---
 #### Purpose:
-  This is a first pass at a service that validates container identity from Rancher and then provides access to Vault. Rancher nor this service actually manage secrets in Vault, that is still left to the user and Vault. What this service will do is create Vault Tokens with policies allowed by the token provided to the service. The token obtained from this service is then used to communicate directly with Vault.
+The Secrets Bridge service is a standardized way of integrating Rancher and Vault such that Docker containers at startup are securely connected with their secrets within Vault. The Secrets Bridge service is composed of a server and agents. At container startup, the service first validates the container's identity with Rancher, and then provides the container with access to Vault. Neither Rancher nor the service actually manages any secrets within Vault; that is still left to the user and Vault. What this service will do is create Vault Tokens which are assigned a subset of policies allowed by the initial grantor-default token provided to the Secrets Bridge server at startup. The app token obtained through this service is then used by the container to communicate directly with Vault. This allows a user to define a custom process in their containers that can inject the secrets it reads from Vault into the app that ultimately uses them, using whatever custom input methods required by the user's app.
 
 #### How it works:
 
