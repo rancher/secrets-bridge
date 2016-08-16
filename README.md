@@ -134,18 +134,19 @@ vault write secrets/secrets-bridge/Default/Stack2/app2 policies=default,app2
 
 ##### Step 6: Configure Vault for Secrets-Bridge startup
 
-Start by creating a temporary token with a TTL of 15m and a max usage of 2 attempts (1st used to place permanent token within cubbyhole; 2nd usage is when secrets-bridge starts up and contacts Vault to get permanent token)
-
-```
-TEMP_TOKEN=$(curl -s -H "X-Vault-Token: $ROOT_TOKEN" ${VAULT_URL}/v1/auth/token/create -d '{"policies": ["default"], "ttl": "15m", "num_uses": 2}' | jq -r '.auth.client_token')
-```
-Then create a permanent token for the grantor-default role. This token will be used by the secrets-bridge to interact with Vault and create temp tokens for applications.
+Start by creating a permanent token for the grantor-default role. This token will be used by the secrets-bridge to interact with Vault and create temp tokens for applications.
 
 ```
 PERM_TOKEN=$(curl -s -X POST -H "X-Vault-Token: $ROOT_TOKEN" ${VAULT_URL}/v1/auth/token/create/grantor-default -d '{"policies": ["default", "grantor-default", "app1", "app2"], "ttl": "72h", "meta": {"configPath": "secret/secrets-bridge/Default"}}' | jq -r '.auth.client_token')
 ```
 
-Finally, place the permanent token within a cubbyhole using the temporary token.  The secrets bridge will use the temporary token (2nd and final usage) to retrieve the permanent token from the cubbyhole when it starts up.
+Then create a temporary token with a TTL of 15m and a max usage of 2 attempts (1st used to place permanent token within cubbyhole; 2nd usage is when secrets-bridge starts up and contacts Vault to get permanent token)
+
+```
+TEMP_TOKEN=$(curl -s -H "X-Vault-Token: $ROOT_TOKEN" ${VAULT_URL}/v1/auth/token/create -d '{"policies": ["default"], "ttl": "15m", "num_uses": 2}' | jq -r '.auth.client_token')
+```
+
+Finally, place the permanent token within a cubbyhole using the temporary token. The secrets bridge will use the temporary token (2nd and final usage) to retrieve the permanent token from the cubbyhole when it starts up.
 
 ```
 curl -X POST -H "X-Vault-Token: ${TEMP_TOKEN}" ${VAULT_URL}/v1/cubbyhole/Default -d "{\"permKey\": \"${PERM_TOKEN}\"}"
