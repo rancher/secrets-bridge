@@ -47,10 +47,16 @@ func StartAgent(c *cli.Context) {
 		d.Decode(msg)
 
 		// For now... will need to add some throttling at some point.
-		go handler.Handle(msg)
+		go wrapHandler(handler.Handle, msg)
 	}
 
 	os.Exit(0)
+}
+
+func wrapHandler(handlerFunc func(*events.Message) error, msg *events.Message) {
+	if err := handlerFunc(msg); err != nil {
+		logrus.Debugf("Warning: %s", err)
+	}
 }
 
 func getDockerClient() (*client.Client, error) {
