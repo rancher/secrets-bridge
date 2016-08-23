@@ -21,7 +21,7 @@ To accomplish this, you need to create some default policies for the `secrets-br
 
 A service would then be deployed into an operators/tools/non-application environment. This item will likely be launchable from the catalog.
 
-Once the server side service is deployed, you would then deploy the agents into your application environment. These agents then listen for Docker events and send container start events to the service.
+Once the server side service is deployed, you would then deploy the agents into your application environment. These agents then listen for Docker container start events. If your container has the secrets.bridge.enabled and nameKey labels correctly set then the agent will send that container's start event to the service.
 
 The service then verifies with Rancher (see notes/todos below) the container's Identity. If the identity can not be verified, then nothing else happens. If the container is verified, the service checks for a policy key set on the config service tokens config path. If a policy is found, the service then generates a temporary token to create a Cubbyhole and a permanent token with the applied policy. The permanent key is placed into the Cubbyhole with the temporary key, which will have a short TTL and 1 more use to get the permanent key.
 
@@ -163,4 +163,12 @@ secrets-bridge server --vault-url $VAULT_ADDR --rancher-url $RANCHER_ENVIRONMENT
 
 ```
 secrets-bridge agent --bridge-url http://[IP Of Secrets Bridge Server]:8181
+```
+
+#### Debugging:
+
+To enable debug output the '-d' flag has to be placed before any of the other command line arguments.  For example:
+
+```
+secrets-bridge -d agent --bridge-url http://[IP Of Secrets Bridge Server]:8181
 ```
