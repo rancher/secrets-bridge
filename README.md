@@ -4,10 +4,7 @@
 
 #### To Dos:
  * Create catalog entry.
- * Make work with TLS production Vault setup (currently only works with a Dev Vault configuration).
- * Add support for K8s and Swarm.
  * Cattle needs signature verification call.
-
 
 ---
 #### Purpose:
