@@ -1,6 +1,8 @@
 package verifier
 
 import (
+	"errors"
+
 	"github.com/rancher/go-rancher/client"
 )
 
@@ -15,8 +17,11 @@ func getProjectFromAPIKey(c *client.RancherClient) (*client.Project, error) {
 func getServiceFromContainer(c *client.RancherClient, container *client.Container) (*client.Service, error) {
 	var svc *client.ServiceCollection
 	err := c.GetLink(container.Resource, "services", &svc)
-	if err != nil || len(svc.Data) == 0 {
+	if err != nil {
 		return nil, err
+	}
+	if len(svc.Data) == 0 {
+		return nil, errors.New("Error: This container is not running inside a Rancher service")
 	}
 
 	return &svc.Data[0], nil
