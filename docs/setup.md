@@ -3,7 +3,7 @@
 
 ### Architecture
 
-![Architecture Image](https://github.com/rancher/secrets-bridge/blob/master/docs/secrets_bridge_arch.svg)
+![Architecture Image](https://cdn.rawgit.com/rancher/secrets-bridge/master/docs/secrets_bridge_arch.svg)
 
 
 ### Configure Vault
