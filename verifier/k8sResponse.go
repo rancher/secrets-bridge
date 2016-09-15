@@ -15,7 +15,9 @@ func (rvr *RancherK8sVerifiedResponse) PrepareResponse(verified bool, container 
 		return errors.New("No pod namespace found")
 	}
 
-	rvr.namespace = container.Labels["io.kubernetes.pod.namespace"].(string)
+	if namespace, ok := container.Labels["io.kubernetes.pod.namespace"].(string); ok {
+		rvr.namespace = namespace
+	}
 
 	project, err := getProjectFromAPIKey(c)
 	if err != nil {
@@ -24,7 +26,9 @@ func (rvr *RancherK8sVerifiedResponse) PrepareResponse(verified bool, container 
 
 	rvr.environmentName = project.Name
 
-	rvr.labelPath = container.Labels["secrets.bridge.k8s.path"].(string)
+	if labelPath, ok := container.Labels["secrets.bridge.k8s.path"].(string); ok {
+		rvr.labelPath = labelPath
+	}
 
 	// This shouldn't happen if the New Verifier Factory was used.
 	if rvr.id == "" {
