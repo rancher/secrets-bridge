@@ -3,6 +3,7 @@ package agent
 import (
 	"encoding/json"
 	"os"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/engine-api/client"
@@ -32,9 +33,12 @@ func StartAgent(c *cli.Context) {
 	}
 	defer eventsResp.Close()
 
+	bridgeUrl := strings.TrimSuffix(c.String("bridge-url"), "/")
+	logrus.Debugf("Sending events to: %s", bridgeUrl)
+
 	handler, err := NewMessageHandler(map[string]interface{}{
 		"metadata-url": c.String("metadata-url"),
-		"bridge-url":   c.String("bridge-url") + "/v1/message",
+		"bridge-url":   bridgeUrl + "/v1/message",
 	})
 	if err != nil {
 		logrus.Fatalf("Error: %s", err)
