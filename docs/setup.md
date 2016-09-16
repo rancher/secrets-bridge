@@ -97,16 +97,16 @@ Obtain this information from your Vault startup log.
 
 ```
 export PORT=8200
-export VAULT_ADDR=http://xxx.xxx.xxx.xxx:$VAULT_PORT
+export VAULT_ADDR=http://xxx.xxx.xxx.xxx:$PORT
 export ROOT_TOKEN=62c08fb4-e635-6a2d-f315-002e374e2ff1
 export RANCHER_ENVIRONMENT_API_URL=http://xxx.xxx.xxx.xxy:XXXX/v1/projects/YYY
 ```
-Set RANCHER_ENVIRONMENT_API_URL to the URL of API key for the Rancher Environment being used. For example, RANCHER_ENVIRONMENT_API_URL=http://192.168.101.128:8080/v1/projects/1a5
+Set `RANCHER_ENVIRONMENT_API_URL` to the URL of API key for the Rancher Environment being used. For example, `RANCHER_ENVIRONMENT_API_URL=http://192.168.101.128:8080/v1/projects/1a5`
 
 ##### Step 4: Create grantor-default role
 
 ```
-curl -s -X POST -H "X-Vault-Token: ${VAULT_TOKEN}" -d '{"allowed_policies": "default,grantor-default,app1,app2"}' http://vault/v1/auth/token/roles/grantor-default
+curl -s -X POST -H "X-Vault-Token: ${ROOT_TOKEN}" -d '{"allowed_policies": "default,grantor-default,app1,app2"}' http://vault/v1/auth/token/roles/grantor-default
 ```
 
 ##### Step 5: Assign policies to applications
@@ -121,19 +121,22 @@ vault write secret/secrets-bridge/Default/Stack2/app2 policies=default,app2
 Start by creating a permanent token for the grantor-default role. This token will be used by the secrets-bridge to interact with Vault and create temp tokens for applications.
 
 ```
-PERM_TOKEN=$(curl -s -X POST -H "X-Vault-Token: $ROOT_TOKEN" ${VAULT_URL}/v1/auth/token/create/grantor-default -d '{"policies": ["default", "grantor-default", "app1", "app2"], "ttl": "72h", "meta": {"configPath": "secret/secrets-bridge/Default"}}' | jq -r '.auth.client_token')
+PERM_TOKEN=$(curl -s -X POST -H "X-Vault-Token: $ROOT_TOKEN" ${VAULT_ADDR}/v1/auth/token/create/grantor-default -d '{"policies": ["default", "grantor-default", "app1", "app2"], "ttl": "72h", "meta": {"configPath": "secret/secrets-bridge/Default"}}' | jq -r '.auth.client_token')
 ```
+
+**NOTE:** _If this key expires all tokens issued by key will also expire. It is recommended that this key is stored and retrievable via an administrative user for upgrades or service restarts of the secrets bridge server. It will always need to be retrieved via Cubbyhole._
+
 
 Then create a temporary token with a TTL of 15m and a max usage of 2 attempts (1st used to place permanent token within cubbyhole; 2nd usage is when secrets-bridge starts up and contacts Vault to get permanent token)
 
 ```
-TEMP_TOKEN=$(curl -s -H "X-Vault-Token: $ROOT_TOKEN" ${VAULT_URL}/v1/auth/token/create -d '{"policies": ["default"], "ttl": "15m", "num_uses": 2}' | jq -r '.auth.client_token')
+TEMP_TOKEN=$(curl -s -H "X-Vault-Token: $ROOT_TOKEN" ${VAULT_ADDR}/v1/auth/token/create -d '{"policies": ["default"], "ttl": "15m", "num_uses": 2}' | jq -r '.auth.client_token')
 ```
 
 Finally, place the permanent token within a cubbyhole using the temporary token. The secrets bridge will use the temporary token (2nd and final usage) to retrieve the permanent token from the cubbyhole when it starts up.
 
 ```
-curl -X POST -H "X-Vault-Token: ${TEMP_TOKEN}" ${VAULT_URL}/v1/cubbyhole/Default -d "{\"permKey\": \"${PERM_TOKEN}\"}"
+curl -X POST -H "X-Vault-Token: ${TEMP_TOKEN}" ${VAULT_ADDR}/v1/cubbyhole/Default -d "{\"permKey\": \"${PERM_TOKEN}\"}"
 echo "${TEMP_TOKEN}"
 ```
 
