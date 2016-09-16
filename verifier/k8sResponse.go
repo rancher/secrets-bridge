@@ -39,6 +39,10 @@ func (rvr *RancherK8sVerifiedResponse) PrepareResponse(verified bool, container 
 }
 
 func (rvr *RancherK8sVerifiedResponse) Path() string {
+	if rvr.labelPath == "" {
+		return fmt.Sprintf("%s/%s/%s", rvr.environmentName, rvr.namespace, rvr.id)
+	}
+
 	return fmt.Sprintf("%s/%s/%s/%s", rvr.environmentName, rvr.namespace, rvr.labelPath, rvr.id)
 }
 
