@@ -99,9 +99,7 @@ Obtain this information from your Vault startup log.
 export PORT=8200
 export VAULT_ADDR=http://xxx.xxx.xxx.xxx:$PORT
 export ROOT_TOKEN=62c08fb4-e635-6a2d-f315-002e374e2ff1
-export RANCHER_ENVIRONMENT_API_URL=http://xxx.xxx.xxx.xxy:XXXX/v1/projects/YYY
 ```
-Set `RANCHER_ENVIRONMENT_API_URL` to the URL of API key for the Rancher Environment being used. For example, `RANCHER_ENVIRONMENT_API_URL=http://192.168.101.128:8080/v1/projects/1a5`
 
 ##### Step 4: Create grantor-default role
 
@@ -148,8 +146,12 @@ It is recommended that your run a secrets bridge server per Rancher environment.
 ##### Step 1: Start Server
 
 ```
+export RANCHER_ENVIRONMENT_API_URL=http://xxx.xxx.xxx.xxy:XXXX/v1/projects/YYY
+
 secrets-bridge server --vault-url $VAULT_ADDR --rancher-url $RANCHER_ENVIRONMENT_API_URL --vault-cubbypath cubbyhole/Default --vault-token $TEMP_TOKEN
 ```
+
+Set `RANCHER_ENVIRONMENT_API_URL` to the URL of API key for the Rancher Environment being used. For example, `RANCHER_ENVIRONMENT_API_URL=http://192.168.101.128:8080/v1/projects/1a5`
 
 #### Cattle
 
@@ -157,6 +159,9 @@ secrets-bridge server --vault-url $VAULT_ADDR --rancher-url $RANCHER_ENVIRONMENT
 	* you will need:
 		* Vault URL
 		* Vault Cubbyhole
+		* Rancher API Keys
+		* Rancher URL
+		* Vault Temp Token
 
 ### Configure Secrets Bridge Agents
 
@@ -183,7 +188,8 @@ B. Deploy the agents as a system stack.
 
 1. Go to system stacks page in UI.
 2. Create new stack
-3. Paste in compose file for secrets-bridge-agent. 
+3. Paste in `docker-compose.yml` file for secrets-bridge-agent from catalog.
+4. Change the `${BRIDGE_URL}` to the value of your secrets bridge address. 
 4. Launch stack
 
 
