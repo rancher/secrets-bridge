@@ -8,9 +8,14 @@ import (
 
 func getProjectFromAPIKey(c *client.RancherClient) (*client.Project, error) {
 	projects, err := c.Project.List(&client.ListOpts{})
-	if err != nil || len(projects.Data) == 0 {
+	if err != nil {
 		return nil, err
 	}
+
+	if len(projects.Data) == 0 {
+		return nil, errors.New("No project found for key")
+	}
+
 	return &projects.Data[0], nil
 }
 

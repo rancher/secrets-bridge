@@ -132,6 +132,8 @@ func (c *RancherVerifier) matchInfoK8s(msg *types.Message, container client.Cont
 		isVerified = true
 	}
 
+	logrus.Debugf("Match K8s says Verified: %s", isVerified)
+
 	return isVerified
 }
 
@@ -172,7 +174,8 @@ func (c *RancherVerifier) requestContainer(opts *client.ListOpts) (client.Contai
 			container = containers.Data[0]
 		}
 
-		if container.ExternalId == "" {
+		//Going to assume this label is there...
+		if container.ExternalId == "" || labelExists("secrets.bridge.enabled", container.Labels) {
 			time.Sleep(i)
 		} else {
 			return container, nil
@@ -180,4 +183,11 @@ func (c *RancherVerifier) requestContainer(opts *client.ListOpts) (client.Contai
 	}
 
 	return container, nil
+}
+
+func labelExists(label string, labels map[string]interface{}) bool {
+	if _, ok := labels[label]; ok {
+		return true
+	}
+	return false
 }
