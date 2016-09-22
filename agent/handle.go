@@ -20,14 +20,6 @@ import (
 	"github.com/rancher/secrets-bridge/writer"
 )
 
-type ContainerEventMessage struct {
-	Event         *events.Message
-	UUID          string `json:"UUID"`
-	Action        string `json:"Action"`
-	Host          string `json:"Host"`
-	ContainerType string `json:"container_type"`
-}
-
 type VaultResponseThing struct {
 	ExternalId string
 	TempToken  string
@@ -125,7 +117,6 @@ func (j *JsonHandler) buildRequestMessage(msg *events.Message) (*ContainerEventM
 		ContainerType: "cattle",
 	}
 
-	nameKey := "name"
 	logrus.Debugf("Received action: %s, from container: %s", msg.Action, msg.ID)
 
 	if _, ok := msg.Actor.Attributes["io.kubernetes.pod.namespace"]; ok {
@@ -135,7 +126,6 @@ func (j *JsonHandler) buildRequestMessage(msg *events.Message) (*ContainerEventM
 			return message, errors.New("Secrets bridge key not found")
 		}
 		message.ContainerType = "kubernetes"
-		nameKey = "io.kubernetes.pod.name"
 	}
 
 	if message.ContainerType == "cattle" {
@@ -147,11 +137,10 @@ func (j *JsonHandler) buildRequestMessage(msg *events.Message) (*ContainerEventM
 	message.Event = msg
 	message.Action = msg.Action
 
-	uuid, err := j.getUUIDFromMetadata(message.Event.Actor.Attributes[nameKey])
+	err := message.SetUUIDFromMetadata(j.metadataCli)
 	if err != nil {
 		return message, err
 	}
-	message.UUID = uuid
 
 	message.Host, err = os.Hostname()
 	if err != nil {
@@ -218,41 +207,15 @@ func formatMessage(message *VaultResponseThing) string {
 	return fmt.Sprintf("export CUBBY_PATH=%s\nexport TEMP_TOKEN=%s\n", message.CubbyPath, message.TempToken)
 }
 
-func (j *JsonHandler) getUUIDFromMetadata(name string) (string, error) {
-	var uuid string
-	logrus.Debugf("Received: %s as a container name", name)
-
-	name = strings.Replace(name, "r-", "", 1)
-	logrus.Debugf("Using: %s as a container name", name)
-
-	containers, err := j.metadataCli.GetContainers()
-	if err != nil {
-		logrus.Errorf("Failed to get containers: %s", err)
-		return "", err
-	}
-
-	for _, container := range containers {
-		if container.Name == name {
-			uuid = container.UUID
-			break
-		}
-	}
-
-	if uuid == "" {
-		logrus.Debugf("No UUID Found")
-		return uuid, errors.New("No UUID found")
-	}
-	logrus.Debugf("UUID: %s found", uuid)
-
-	return uuid, nil
-}
-
 func (j *JsonHandler) checkForK8sSecretsLabel(msg *events.Message) bool {
 	enabled := false
 	var labels map[string]string
 
 	name := msg.Actor.Attributes["io.kubernetes.pod.name"]
+	nameSpace := msg.Actor.Attributes["io.kubernetes.pod.namespace"]
+
 	logrus.Debugf("Pod Name: %s", name)
+	logrus.Debugf("Pod Namespace: %s", name)
 
 	containers, err := j.metadataCli.GetContainers()
 	if err != nil {
@@ -261,8 +224,13 @@ func (j *JsonHandler) checkForK8sSecretsLabel(msg *events.Message) bool {
 
 	for _, container := range containers {
 		if container.Name == name {
-			labels = container.Labels
-			break
+			// ensure container name and namespace are equal.
+			if ns, ok := container.Labels["io.kubernetes.pod.namespace"]; ok {
+				if ns == nameSpace {
+					labels = container.Labels
+					break
+				}
+			}
 		}
 	}
 
