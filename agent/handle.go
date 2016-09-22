@@ -123,7 +123,7 @@ func (j *JsonHandler) buildRequestMessage(msg *events.Message) (*ContainerEventM
 		logrus.Debugf("Container type is Kubernetes")
 
 		if !j.checkForK8sSecretsLabel(msg) {
-			return message, errors.New("Secrets bridge key not found")
+			return message, errors.New("Secrets bridge label not found")
 		}
 		message.ContainerType = "kubernetes"
 	}
@@ -209,7 +209,6 @@ func formatMessage(message *VaultResponseThing) string {
 
 func (j *JsonHandler) checkForK8sSecretsLabel(msg *events.Message) bool {
 	enabled := false
-	var labels map[string]string
 
 	name := msg.Actor.Attributes["io.kubernetes.pod.name"]
 	nameSpace := msg.Actor.Attributes["io.kubernetes.pod.namespace"]
@@ -217,26 +216,20 @@ func (j *JsonHandler) checkForK8sSecretsLabel(msg *events.Message) bool {
 	logrus.Debugf("Pod Name: %s", name)
 	logrus.Debugf("Pod Namespace: %s", name)
 
-	containers, err := j.metadataCli.GetContainers()
-	if err != nil {
-		return enabled
-	}
-
-	for _, container := range containers {
-		if container.Name == name {
-			// ensure container name and namespace are equal.
-			if ns, ok := container.Labels["io.kubernetes.pod.namespace"]; ok {
-				if ns == nameSpace {
-					labels = container.Labels
-					break
-				}
-			}
+	container := metadata.Container{}
+	for len(container.Labels) == 0 {
+		containers, err := j.metadataCli.GetContainers()
+		if err != nil {
+			logrus.Error(err)
+			return false
 		}
+		container = loopContainers(name, "io.kubernetes.pod.namespace", nameSpace, containers)
+		time.Sleep(100 * time.Millisecond)
 	}
 
-	logrus.Debugf("Labels found: %#v", labels)
+	logrus.Debugf("Labels found: %#v", container.Labels)
 
-	if secretEnabled, ok := labels["secrets.bridge.enabled"]; ok {
+	if secretEnabled, ok := container.Labels["secrets.bridge.enabled"]; ok {
 		if secretEnabled == "true" {
 			enabled = true
 		}
