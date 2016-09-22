@@ -1,5 +1,23 @@
 # Using Secrets Bridge
 ---
+#### Basics
+
+The Secrets Bridge will create a temporary and permanent token with the following characteristics:
+
+Temp:
+  TTL: 300s
+  Uses: 1
+  Policies: default
+
+Permanent:
+  TTL: 1h
+  Policies: Supplied by Vault configuration.
+
+Both tokens are tied to the issuing token of the Secrets Bridge server, if that token expires these tokens will also. This is a Vault enforced behavior.
+
+The temporary token and path to retrieve the permanent token will be written to /tmp/secrets.txt
+Your container will be responsible for retrieving the permanent token and refreshing it if needed. The temporary token can only be used once within 5 minutes of creation.
+
 
 #### Cattle Environments
 1. In Vault setup a policy for your application. Depending on the scope, the secrets bridge will look for a policy in this order:
