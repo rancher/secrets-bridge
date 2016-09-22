@@ -93,7 +93,7 @@ func (j *JsonHandler) Handle(msg *events.Message) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 201 {
-		return nil
+		return fmt.Errorf("Didn't get created response, got: %d", resp.StatusCode)
 	}
 
 	var vaultThing VaultResponseThing
@@ -121,6 +121,10 @@ func (j *JsonHandler) buildRequestMessage(msg *events.Message) (*ContainerEventM
 
 	if _, ok := msg.Actor.Attributes["io.kubernetes.pod.namespace"]; ok {
 		logrus.Debugf("Container type is Kubernetes")
+
+		if name, ok := msg.Actor.Attributes["io.kubernetes.container.name"]; ok && name == "POD" {
+			return message, errors.New("Ignoring K8s POD container")
+		}
 
 		if !j.checkForK8sSecretsLabel(msg) {
 			return message, errors.New("Secrets bridge label not found")

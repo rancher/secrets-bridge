@@ -15,9 +15,10 @@ func (rvr *RancherK8sVerifiedResponse) PrepareResponse(verified bool, container 
 		return errors.New("No pod namespace found")
 	}
 
-	if namespace, ok := container.Labels["io.kubernetes.pod.namespace"].(string); ok {
-		rvr.namespace = namespace
+	if _, ok := container.Labels["io.kubernetes.pod.namespace"].(string); !ok {
+		return errors.New("Namespace could not be determined")
 	}
+	rvr.namespace = container.Labels["io.kubernetes.pod.namespace"].(string)
 
 	project, err := getProjectFromAPIKey(c)
 	if err != nil {
