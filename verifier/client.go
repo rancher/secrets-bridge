@@ -175,7 +175,7 @@ func (c *RancherVerifier) requestContainer(opts *client.ListOpts) (client.Contai
 		}
 
 		//Going to assume this label is there...
-		if container.ExternalId == "" || labelExists("secrets.bridge.enabled", container.Labels) {
+		if container.ExternalId == "" || !labelExists("secrets.bridge.enabled", container.Labels) {
 			time.Sleep(i)
 		} else {
 			return container, nil

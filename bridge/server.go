@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
@@ -40,7 +41,13 @@ func StartServer(c *cli.Context) {
 	r.HandleFunc("/v1/message", tokenVerificationHandler).Methods("POST")
 
 	logrus.Infof("Listening on port: 8181")
-	http.ListenAndServe(":8181", r)
+	s := &http.Server{
+		Addr:         ":8181",
+		Handler:      r,
+		ReadTimeout:  45 * time.Second,
+		WriteTimeout: 45 * time.Second,
+	}
+	s.ListenAndServe()
 }
 
 func initActors(c *cli.Context) (*serverActors, error) {
