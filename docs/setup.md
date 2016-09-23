@@ -87,8 +87,8 @@ For demonstration of the Rancher use case using (i.e. environments, stacks, serv
 
 ```
 vault policy-write grantor-default ./grantor-default.hcl
-vault policy-write app1 ./app1
-vault policy-write app2 ./app2
+vault policy-write app1 ./app1.hcl
+vault policy-write app2 ./app2.hcl
 ```
 
 ##### Step 3: Set script variables
@@ -104,7 +104,7 @@ export ROOT_TOKEN=62c08fb4-e635-6a2d-f315-002e374e2ff1
 ##### Step 4: Create grantor-default role
 
 ```
-curl -s -X POST -H "X-Vault-Token: ${ROOT_TOKEN}" -d '{"allowed_policies": "default,grantor-default,app1,app2"}' http:/${VAULT_ADDR}/vault/v1/auth/token/roles/grantor-default
+curl -s -X POST -H "X-Vault-Token: ${ROOT_TOKEN}" -d '{"allowed_policies": "default,grantor-default,app1,app2"}' ${VAULT_ADDR}/v1/auth/token/roles/grantor-default
 ```
 
 ##### Step 5: Assign policies to applications
