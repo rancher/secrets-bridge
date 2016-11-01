@@ -18,6 +18,8 @@ Both tokens are tied to the issuing token of the Secrets Bridge server, if that 
 The temporary token and path to retrieve the permanent token will be written to /tmp/secrets.txt
 Your container will be responsible for retrieving the permanent token and refreshing it if needed. The temporary token can only be used once within 5 minutes of creation.
 
+Your application should poll for the /tmp/secrets.txt file for 4.5 minutes. The file *should* be available quickly in most cases, but this process is run out of band of the container provisioning process. So it is likely the file will not be immediately available.
+
 
 #### Cattle Environments
 1. In Vault setup a policy for your application. Depending on the scope, the secrets bridge will look for a policy in this order:

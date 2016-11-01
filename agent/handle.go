@@ -213,6 +213,10 @@ func formatMessage(message *VaultResponseThing) string {
 
 func (j *JsonHandler) checkForK8sSecretsLabel(msg *events.Message) bool {
 	enabled := false
+	labelExists := false
+	labelValue := "notavailable"
+
+	maxWait := 129 * time.Second
 
 	name := msg.Actor.Attributes["io.kubernetes.pod.name"]
 	nameSpace := msg.Actor.Attributes["io.kubernetes.pod.namespace"]
@@ -221,22 +225,23 @@ func (j *JsonHandler) checkForK8sSecretsLabel(msg *events.Message) bool {
 	logrus.Debugf("Pod Namespace: %s", name)
 
 	container := metadata.Container{}
-	for len(container.Labels) == 0 {
+	for i := 1 * time.Second; i < maxWait; i *= time.Duration(2) {
 		containers, err := j.metadataCli.GetContainers()
 		if err != nil {
 			logrus.Error(err)
 			return false
 		}
 		container = loopContainers(name, "io.kubernetes.pod.namespace", nameSpace, containers)
-		time.Sleep(100 * time.Millisecond)
+		if labelValue, labelExists = container.Labels["secrets.bridge.enabled"]; labelExists {
+			break
+		}
+		time.Sleep(i)
 	}
 
 	logrus.Debugf("Labels found: %#v", container.Labels)
 
-	if secretEnabled, ok := container.Labels["secrets.bridge.enabled"]; ok {
-		if secretEnabled == "true" {
-			enabled = true
-		}
+	if labelValue == "true" {
+		enabled = true
 	}
 
 	return enabled
