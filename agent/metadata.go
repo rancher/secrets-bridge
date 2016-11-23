@@ -18,6 +18,8 @@ type ContainerEventMessage struct {
 }
 
 func (cem *ContainerEventMessage) SetUUIDFromMetadata(mdCli *metadata.Client) error {
+	var uuidPrefix string
+
 	nameKey := "name"
 	verifyKey := "io.rancher.container.uuid"
 
@@ -30,7 +32,14 @@ func (cem *ContainerEventMessage) SetUUIDFromMetadata(mdCli *metadata.Client) er
 
 	logrus.Debugf("Received: %s as a container name", name)
 
-	name = strings.Replace(name, "r-", "", 1)
+	if strings.HasPrefix(name, "r-") {
+		name = strings.Replace(name, "r-", "", 1)
+		nameSplit := strings.Split(name, "-")
+
+		// uuidPrefix = nameSplit[len(nameSplit)-1]
+		name = strings.Join(nameSplit[:len(nameSplit)-1], "-")
+	}
+
 	logrus.Debugf("Using: %s as a container name", name)
 
 	container := metadata.Container{}
