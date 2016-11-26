@@ -30,6 +30,48 @@ type SecretResponse struct {
 	CubbyPath  string `json:"cubbyPath"`
 }
 
+type Error interface {
+	error
+	Status() int
+}
+
+type StatusError struct {
+	Code int
+	Err  error
+}
+
+func (se *StatusError) Error() string {
+	return se.Err.Error()
+}
+
+func (se *StatusError) Status() int {
+	return se.Code
+}
+
+func HTTPHandlerWrapper(t func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		logrus.Debugf("Processing Request")
+		defer logrus.Debugf("Finished Processing Request")
+
+		header, _ := base64.StdEncoding.DecodeString(r.Header.Get("X-Agent-Signature"))
+
+		verifiedAuth, err := actors.authVerifier.VerifyAuth(string(header))
+		if err != nil || !verifiedAuth {
+			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		}
+
+		if err := t(w, r); err != nil {
+			switch e := err.(type) {
+			case Error:
+				http.Error(w, e.Error(), e.Status())
+			default:
+				http.Error(w, http.StatusText(http.StatusInternalServerError),
+					http.StatusInternalServerError)
+			}
+		}
+	}
+}
+
 func StartServer(c *cli.Context) {
 	var err error
 	actors, err = initActors(c)
@@ -38,7 +80,7 @@ func StartServer(c *cli.Context) {
 	}
 
 	r := mux.NewRouter()
-	r.HandleFunc("/v1/message", tokenVerificationHandler).Methods("POST")
+	r.HandleFunc("/v1/message", HTTPHandlerWrapper(messageHandler)).Methods("POST")
 
 	logrus.Infof("Listening on port: 8181")
 	s := &http.Server{
@@ -89,56 +131,33 @@ func initActors(c *cli.Context) (*serverActors, error) {
 
 }
 
-func tokenVerificationHandler(w http.ResponseWriter, r *http.Request) {
-	header, _ := base64.StdEncoding.DecodeString(r.Header.Get("X-Agent-Signature"))
-	verifiedAuth, err := actors.authVerifier.VerifyAuth(string(header))
+func messageHandler(w http.ResponseWriter, r *http.Request) error {
+	var response *SecretResponse
 
-	switch {
-	case verifiedAuth && err == nil:
-		messageHandler(w, r)
-		return
-	case err != nil:
-		logrus.Errorf("Error Veifiying header: %s", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	default:
-		jsonUnauthorizedResponse(w)
-		return
-	}
-
-	//just in case...
-	jsonUnauthorizedResponse(w)
-	return
-}
-
-func messageHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 
 	t := &types.Message{}
 	err := decoder.Decode(&t)
 	if err != nil {
-		logrus.Errorf("Bad..%s", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		logrus.Errorf("BadReqeust..%s", err)
+		return &StatusError{http.StatusBadRequest, err}
 	}
 
+	logrus.Debugf("MSG Decoded: %#v", t)
 	if t.Action == "start" && t.UUID != "" {
 		logrus.Debugf("Received start event for container UUID: %s", t.UUID)
-		if err := ContainerStart(w, t); err != nil {
+		if response, err = ContainerStart(w, t); err != nil {
 			logrus.Errorf("Unverified: %s", err)
-			w.WriteHeader(http.StatusNotFound)
-			return
+			return &StatusError{http.StatusNotFound, err}
 		}
-		return
+		jsonSuccessResponse(response, w)
+
+		logrus.Debugf("Responded successful")
+
+		return nil
 	}
 
-	w.WriteHeader(http.StatusNotImplemented)
-	return
-}
-
-func jsonUnauthorizedResponse(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusForbidden)
-	return
+	return &StatusError{http.StatusNotImplemented, nil}
 }
 
 func jsonSuccessResponse(body *SecretResponse, w http.ResponseWriter) {
@@ -148,19 +167,19 @@ func jsonSuccessResponse(body *SecretResponse, w http.ResponseWriter) {
 	return
 }
 
-func ContainerStart(w http.ResponseWriter, msg *types.Message) error {
+func ContainerStart(w http.ResponseWriter, msg *types.Message) (*SecretResponse, error) {
 	var tempKey string
 
 	verifiedObj, err := actors.verifier.Verify(msg)
 	if err != nil {
-		return err
+		return &SecretResponse{}, err
 	}
 
 	if verifiedObj.Verified() {
 		logrus.Debugf("Verified")
 		tempKey, err = actors.secretStore.CreateSecretKey(verifiedObj)
 		if err != nil {
-			return err
+			return &SecretResponse{}, err
 		}
 	}
 
@@ -171,11 +190,9 @@ func ContainerStart(w http.ResponseWriter, msg *types.Message) error {
 
 	// ToDo: get a verified container object
 	// This is not very generic...
-	jsonSuccessResponse(&SecretResponse{
+	return &SecretResponse{
 		TempToken:  tempKey,
 		ExternalID: verifiedObj.ID(),
 		CubbyPath:  actors.secretStore.GetSecretStoreURL() + "/cubbyhole/" + verifiedObj.Path(),
-	}, w)
-
-	return nil
+	}, nil
 }

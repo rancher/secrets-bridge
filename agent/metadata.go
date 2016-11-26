@@ -18,8 +18,6 @@ type ContainerEventMessage struct {
 }
 
 func (cem *ContainerEventMessage) SetUUIDFromMetadata(mdCli *metadata.Client) error {
-	var uuidPrefix string
-
 	nameKey := "name"
 	verifyKey := "io.rancher.container.uuid"
 
@@ -36,7 +34,6 @@ func (cem *ContainerEventMessage) SetUUIDFromMetadata(mdCli *metadata.Client) er
 		name = strings.Replace(name, "r-", "", 1)
 		nameSplit := strings.Split(name, "-")
 
-		// uuidPrefix = nameSplit[len(nameSplit)-1]
 		name = strings.Join(nameSplit[:len(nameSplit)-1], "-")
 	}
 

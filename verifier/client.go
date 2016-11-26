@@ -78,9 +78,10 @@ func (c *RancherVerifier) Verify(msg *types.Message) (VerifiedResponse, error) {
 		if err != nil {
 			return resp, err
 		}
+		return resp, nil
 	}
 
-	return resp, nil
+	return resp, errors.New("Container not verified")
 }
 
 func (c *RancherVerifier) VerifyAuth(authString string) (bool, error) {
@@ -118,17 +119,8 @@ func (c *RancherVerifier) matchInfoK8s(msg *types.Message, container client.Cont
 
 	logrus.Debugf("rancher k8s pod uid: %s for eventId: %s", container.Labels["io.kubernetes.pod.uid"], msg.Event.ID)
 
-	eventIdContainer, err := c.requestContainer(&client.ListOpts{
-		Filters: map[string]interface{}{
-			"externalId": msg.Event.ID,
-		},
-	})
-	if err != nil {
-		return false
-	}
-
-	if container.Labels["io.kubernetes.pod.uid"] == eventIdContainer.Labels["io.kubernetes.pod.uid"] {
-		logrus.Debugf("Pod UUID: %s and %s match", container.Labels["io.kubernetes.pod.uid"], eventIdContainer.Labels["io.kubernetes.pod.uid"])
+	if msg.Event.Actor.Attributes["io.kubernetes.pod.uid"] == container.Labels["io.kubernetes.pod.uid"] {
+		logrus.Debugf("Pod UUID: %s and %s match", container.Labels["io.kubernetes.pod.uid"], msg.Event.Actor.Attributes["io.kubernetes.pod.uid"])
 		isVerified = true
 	}
 
@@ -164,28 +156,29 @@ func (c *RancherVerifier) requestContainer(opts *client.ListOpts) (client.Contai
 	maxWaitTime := 60 * time.Second
 	var container client.Container
 
-	for i := 1 * time.Second; i < maxWaitTime; i *= time.Duration(2) {
+	for i := 1 * time.Second; i < maxWaitTime; i *= 2 * time.Second {
 		containers, err := c.client.Container.List(opts)
 		if err != nil {
 			return client.Container{}, err
 		}
 
 		if len(containers.Data) > 0 {
-			container = containers.Data[0]
+			//Going to assume this label should be there...
+			if containers.Data[0].ExternalId != "" && labelExists("secrets.bridge.enabled", containers.Data[0].Labels) {
+				container = containers.Data[0]
+				logrus.Debugf("Found container: %#v", container)
+				break
+			}
 		}
 
-		//Going to assume this label is there...
-		if container.ExternalId == "" || !labelExists("secrets.bridge.enabled", container.Labels) {
-			time.Sleep(i)
-		} else {
-			return container, nil
-		}
+		time.Sleep(i)
 	}
 
 	return container, nil
 }
 
 func labelExists(label string, labels map[string]interface{}) bool {
+	logrus.Debugf("looking for %s in %#v", label, labels)
 	if _, ok := labels[label]; ok {
 		return true
 	}
